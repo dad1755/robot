@@ -5,3 +5,5 @@ pytesseract
 openai
 numpy
 webdriver-manager
+opencv-python-headless
+
