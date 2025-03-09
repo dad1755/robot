@@ -9,5 +9,7 @@ yfinance
 matplotlib
 python-dotenv
 pandas-ta
+setuptools
+
 
 
