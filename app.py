@@ -15,13 +15,21 @@ OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Function to fetch EUR/USD Forex Data
+# Function to fetch EUR/USD Forex Data for specific periods
 def fetch_forex_data(interval):
+    period_mapping = {
+        "15m": "3h",  # 15-minute interval for the last 3 hours
+        "5m": "90m"   # 5-minute interval for the last 1.5 hours
+    }
+    
     try:
-        data = yf.download("EURUSD=X", period="1d", interval=interval)
+        period = period_mapping.get(interval, "1d")  # Default to 1 day if interval not found
+        data = yf.download("EURUSD=X", period=period, interval=interval)
         return data if not data.empty else None
     except Exception as e:
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
+
 
 # Function to analyze forex trends with AI
 def analyze_trends(data):
