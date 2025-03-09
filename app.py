@@ -2,6 +2,38 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 from openai import OpenAI, OpenAIError
+import pandas as pd
+
+def fetch_forex_data(interval):
+    try:
+        # Use 1-day period to get sufficient data
+        data = yf.download("EURUSD=X", period="1d", interval=interval)
+        
+        if data is None or data.empty:
+            return None
+        
+        # Convert index to datetime (if not already)
+        data.index = pd.to_datetime(data.index)
+
+        # Get the latest time available
+        latest_time = data.index[-1]
+
+        # Define lookback periods
+        if interval == "15m":
+            cutoff_time = latest_time - pd.Timedelta(hours=3)
+        elif interval == "5m":
+            cutoff_time = latest_time - pd.Timedelta(minutes=90)
+        else:
+            return data  # Return unfiltered data for unsupported intervals
+
+        # Filter data for the desired timeframe
+        filtered_data = data[data.index >= cutoff_time]
+
+        return filtered_data if not filtered_data.empty else None
+    
+    except Exception as e:
+        st.error(f"⚠️ Error fetching forex data: {e}")
+        return None
 
 # ✅ Debugging: Check if API key is loaded correctly
 if "OPENAI_API_KEY" not in st.secrets:
