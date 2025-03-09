@@ -3,7 +3,5 @@ selenium
 webdriver-manager
 opencv-python-headless
 pytesseract
-numpy
 openai
-pillow
-requests
+numpy
