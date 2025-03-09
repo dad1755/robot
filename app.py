@@ -3,6 +3,7 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import openai
 import numpy as np
+import openai.error  # Ensure OpenAI error handling is included
 
 # OpenAI API Key (Set your key here)
 OPENAI_API_KEY = "your-api-key"
@@ -11,8 +12,11 @@ OPENAI_API_KEY = "your-api-key"
 def fetch_forex_data():
     try:
         data = yf.download("EURUSD=X", period="6mo", interval="1d")
+        if data.empty:
+            raise ValueError("No data fetched from Yahoo Finance")
         return data
     except Exception as e:
+        st.error(f"⚠️ Error fetching forex data: {str(e)}")
         return None
 
 # Analyze Forex Trends with AI
@@ -20,22 +24,29 @@ def analyze_trends(data):
     if data is None or data.empty:
         return "⚠️ No data available for analysis."
 
-    # Extract key stats
-    latest_price = data["Close"].iloc[-1]
-    price_change = latest_price - data["Close"].iloc[-2]
-    trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
+    try:
+        # Extract key stats
+        latest_price = data["Close"].iloc[-1]
+        prev_price = data["Close"].iloc[-2]
+        price_change = float(latest_price - prev_price)  # Convert to scalar
 
-    # Send to OpenAI for analysis
-    openai.api_key = OPENAI_API_KEY
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a financial analyst."},
-            {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
-        ]
-    )
-    
-    return response["choices"][0]["message"]["content"]
+        trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
+
+        # OpenAI API Call
+        openai.api_key = OPENAI_API_KEY
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a financial analyst."},
+                {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
+            ]
+        )
+        return response["choices"][0]["message"]["content"]
+
+    except openai.error.OpenAIError as e:
+        return f"⚠️ AI Analysis Error: {str(e)}"
+    except Exception as e:
+        return f"⚠️ Unexpected Error: {str(e)}"
 
 # Streamlit UI
 st.title("📈 Automated Trading Signal Analyzer")
