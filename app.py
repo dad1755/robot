@@ -1,96 +1,63 @@
 import streamlit as st
 import time
-import pyautogui
 import cv2
-import pytesseract
-import openai
-import talib
 import numpy as np
+import openai
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Set your ChatGPT API Key
+# Set OpenAI API Key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Function to Capture Screenshot
-def capture_screenshot(save_path, url):
+# Function to Capture Screenshot using Selenium
+def capture_screenshot(url, save_path):
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")
-    options.add_argument("--start-maximized")
-    
+    options.add_argument("--window-size=1920,1080")
+
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get(url)
-    
+
     time.sleep(5)  # Wait for the page to load
 
-    screenshot = pyautogui.screenshot()
-    screenshot.save(save_path)
-    
+    driver.save_screenshot(save_path)
     driver.quit()
     return save_path
 
-# Extract Text & Numbers from Screenshot using OCR
-def extract_text(image_path):
-    image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray)
-    return text
+# Preprocess the Image for Pattern Recognition
+def preprocess_image(image_path):
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    image = cv2.GaussianBlur(image, (5, 5), 0)
+    edges = cv2.Canny(image, 50, 150)  # Edge detection
+    return edges
 
-# Analyze Market Trends using Technical Indicators
-def analyze_market(data):
-    prices = np.array([float(x) for x in data if x.replace('.', '', 1).isdigit()])
-    if len(prices) < 5:
-        return "Not enough data for analysis"
-
-    sma = talib.SMA(prices, timeperiod=5)[-1]
-    macd, signal, _ = talib.MACD(prices)
-    macd_val, signal_val = macd[-1], signal[-1]
-
-    if macd_val > signal_val and prices[-1] > sma:
-        return "🔼 **BUY SIGNAL** - Uptrend detected!"
-    elif macd_val < signal_val and prices[-1] < sma:
-        return "🔽 **SELL SIGNAL** - Downtrend detected!"
-    else:
-        return "⏳ **HOLD** - No strong trend"
-
-# Send Data to ChatGPT for Deeper Analysis
-def chatgpt_analysis(text_data):
-    response = openai.ChatCompletion.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system", "content": "You are a professional financial market analyst."},
-            {"role": "user", "content": f"Analyze this market data and provide a buy/sell recommendation: {text_data}"}
-        ]
-    )
+# Send Image to ChatGPT Vision API for Pattern Recognition
+def analyze_chart_with_chatgpt(image_path):
+    with open(image_path, "rb") as img_file:
+        response = openai.ChatCompletion.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {"role": "system", "content": "You are a professional stock market analyst. Analyze the chart pattern and provide a buy/sell recommendation."},
+                {"role": "user", "content": "What is the trend in this stock chart?"},
+                {"role": "user", "content": {"image": img_file}}
+            ]
+        )
     return response["choices"][0]["message"]["content"]
 
 # Streamlit UI
-st.title("📊 Automated Market Analysis - Yahoo Finance")
+st.title("📊 Automated Stock Market Chart Analysis")
 
-# Buttons to Capture Screenshots
-if st.button("Capture 15m Chart Screenshot"):
-    img_path_15m = capture_screenshot("chart_15m.png", "https://finance.yahoo.com")
-    st.image(img_path_15m, caption="15m Chart Captured")
-    extracted_text_15m = extract_text(img_path_15m)
-    st.write("Extracted Data:", extracted_text_15m)
+yahoo_finance_url = "https://finance.yahoo.com"
 
-    # Get Market Analysis
-    trend_analysis = analyze_market(extracted_text_15m.split())
-    chatgpt_result = chatgpt_analysis(extracted_text_15m)
+if st.button("Capture & Analyze Yahoo Finance Chart"):
+    screenshot_path = capture_screenshot(yahoo_finance_url, "chart.png")
+    edges = preprocess_image(screenshot_path)
     
-    st.write("📌 **Technical Analysis:**", trend_analysis)
-    st.write("💡 **ChatGPT Insights:**", chatgpt_result)
+    st.image(edges, caption="Processed Chart", channels="GRAY")
 
-if st.button("Capture 5m Chart Screenshot"):
-    img_path_5m = capture_screenshot("chart_5m.png", "https://finance.yahoo.com")
-    st.image(img_path_5m, caption="5m Chart Captured")
-    extracted_text_5m = extract_text(img_path_5m)
-    st.write("Extracted Data:", extracted_text_5m)
-
-    # Get Market Analysis
-    trend_analysis = analyze_market(extracted_text_5m.split())
-    chatgpt_result = chatgpt_analysis(extracted_text_5m)
-    
-    st.write("📌 **Technical Analysis:**", trend_analysis)
-    st.write("💡 **ChatGPT Insights:**", chatgpt_result)
+    with st.spinner("Analyzing chart pattern..."):
+        analysis = analyze_chart_with_chatgpt(screenshot_path)
+        st.write("📈 **Analysis Result:**")
+        st.write(analysis)
