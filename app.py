@@ -3,9 +3,13 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import numpy as np
 from openai import OpenAI, OpenAIError
-
 import os
+
+# Load API Key from environment variable
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    st.error("⚠️ Missing OpenAI API Key. Set it as an environment variable.")
+    st.stop()
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -14,8 +18,9 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def fetch_forex_data(interval):
     try:
         data = yf.download("EURUSD=X", period="1d", interval=interval)
-        return data
+        return data if not data.empty else None
     except Exception as e:
+        st.error(f"⚠️ Error fetching forex data: {e}")
         return None
 
 # Analyze Forex Trends with AI
@@ -52,7 +57,7 @@ for label, interval in intervals.items():
     st.subheader(f"📊 EUR/USD {label} Chart")
     forex_data = fetch_forex_data(interval)
 
-    if forex_data is not None and not forex_data.empty:
+    if forex_data is not None:
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.plot(forex_data.index, forex_data["Close"], label="Close Price", color="blue")
         ax.set_title(f"EUR/USD Forex Chart ({label})")
