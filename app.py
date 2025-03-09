@@ -1,52 +1,38 @@
 import streamlit as st
-import time
+import requests
 import cv2
 import numpy as np
 import openai
 import pytesseract
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+from PIL import Image
+from io import BytesIO
 
 # OpenAI API Key (Set your key here)
 OPENAI_API_KEY = "your-api-key"
 
-def get_screenshot():
+# Yahoo Finance Chart Image URL
+YAHOO_CHART_URL = "https://chart.finance.yahoo.com/z?s=EURUSD=X&t=6m&q=l&l=on&z=l&p=m50,m200"
+
+def fetch_chart():
+    """Fetch the Yahoo Finance chart image directly."""
     try:
-        # Setup Chrome options
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-
-        # Install & setup ChromeDriver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-
-        # Open Yahoo Finance EUR/USD chart
-        url = "https://finance.yahoo.com/quote/EURUSD=X/chart"
-        driver.get(url)
-        time.sleep(5)  # Allow chart to load
-
-        # Screenshot
-        screenshot_path = "chart.png"
-        driver.save_screenshot(screenshot_path)
-        driver.quit()
-
-        return screenshot_path
-
+        response = requests.get(YAHOO_CHART_URL)
+        if response.status_code == 200:
+            return response.content
+        else:
+            return None
     except Exception as e:
-        st.error(f"WebDriver Error: {e}")
         return None
 
-def analyze_chart_with_ai(image_path):
+def analyze_chart_with_ai(image_data):
     """Extracts text from the image and sends it to ChatGPT for analysis."""
     try:
         # Load image
-        img = cv2.imread(image_path)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        image = Image.open(BytesIO(image_data))
+        img_array = np.array(image)
+
+        # Convert to grayscale for OCR
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
 
         # Extract text using Tesseract OCR
         extracted_text = pytesseract.image_to_string(gray)
@@ -54,7 +40,7 @@ def analyze_chart_with_ai(image_path):
         if not extracted_text.strip():
             return "⚠️ No readable text found in the chart."
 
-        # Send to OpenAI API for analysis
+        # Send extracted data to OpenAI for analysis
         openai.api_key = OPENAI_API_KEY
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -72,13 +58,13 @@ def analyze_chart_with_ai(image_path):
 # Streamlit UI
 st.title("📈 Automated Trading Signal Analyzer")
 
-screenshot_file = get_screenshot()
-if screenshot_file:
-    st.image(screenshot_file, caption="Captured Chart Screenshot")
+chart_data = fetch_chart()
+if chart_data:
+    st.image(chart_data, caption="Captured Yahoo Finance Chart")
     
     # Analyze chart with AI
-    analysis = analyze_chart_with_ai(screenshot_file)
+    analysis = analyze_chart_with_ai(chart_data)
     st.subheader("🔥 AI Analysis:")
     st.write(analysis)
 else:
-    st.error("⚠️ Failed to capture screenshot. Check WebDriver setup!")
+    st.error("⚠️ Failed to fetch chart. Check Yahoo Finance URL!")
