@@ -3,6 +3,5 @@ selenium
 opencv-python
 pytesseract
 openai
-talib-binary
 numpy
 webdriver-manager
