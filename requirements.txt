@@ -5,3 +5,5 @@ opencv-python-headless
 pytesseract
 openai
 numpy
+yfinance
+
