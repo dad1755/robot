@@ -1,54 +1,62 @@
-import os
-import time
 import streamlit as st
+import time
 import numpy as np
+import pytesseract
 import openai
 import cv2
-import pytesseract
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
+# Function to capture a screenshot from Yahoo Finance EUR/USD chart
+def get_screenshot():
+    url = "https://finance.yahoo.com/quote/EURUSD=X/chart"
 
-
-# Set up Selenium for taking screenshots
-def get_screenshot(url, filename="screenshot.png"):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--headless")  # Run in headless mode (no GUI)
+    chrome_options.add_argument("--disable-gpu")  # Disable GPU for headless mode
     chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    
     driver.get(url)
-    time.sleep(5)  # Wait for page to load
-    driver.save_screenshot(filename)
+    time.sleep(5)  # Wait for the chart to load
+
+    screenshot_path = "chart_screenshot.png"
+    driver.save_screenshot(screenshot_path)
     driver.quit()
-    return filename
 
-# Image processing using OpenCV & OCR
-def process_chart(filename):
-    image = cv2.imread(filename)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray)
-    return text
+    return screenshot_path
 
-# Send chart data to OpenAI for analysis
-def analyze_chart(text):
+# Function to analyze the chart using OpenAI
+def analyze_chart(image_path):
+    img = cv2.imread(image_path)
+    text = pytesseract.image_to_string(img)  # Extract text from the chart
+
+    # Send extracted text to ChatGPT for analysis
+    openai.api_key = "YOUR_OPENAI_API_KEY"
     response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=[{"role": "user", "content": f"Analyze this chart data and give trading signal:\n{text}"}]
+        messages=[{"role": "system", "content": "Analyze this chart and give trading advice"},
+                  {"role": "user", "content": text}]
     )
+    
     return response["choices"][0]["message"]["content"]
 
 # Streamlit UI
-st.title("Automated Trading Signal Analyzer")
-url = st.text_input("Enter Yahoo Finance Chart URL:", "https://finance.yahoo.com/")
-if st.button("Analyze Chart"):
-    screenshot_file = get_screenshot(url)
-    chart_data = process_chart(screenshot_file)
-    signal = analyze_chart(chart_data)
-    st.image(screenshot_file, caption="Captured Chart", use_column_width=True)
-    st.write("### Trading Signal")
-    st.write(signal)
+st.title("📈 Automated Trading Signal Analyzer")
+
+if st.button("Capture and Analyze Chart"):
+    with st.spinner("Fetching EUR/USD chart..."):
+        screenshot_file = get_screenshot()
+        st.image(screenshot_file, caption="Captured Chart", use_column_width=True)
+
+        st.write("🔍 **Analyzing chart for trading signals...**")
+        analysis_result = analyze_chart(screenshot_file)
+
+        st.write("📊 **Trading Recommendation:**")
+        st.success(analysis_result)
