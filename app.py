@@ -1,17 +1,15 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
-import numpy as np
 import os
 from openai import OpenAI, OpenAIError
 
-# Get API Key from environment variables (e.g., GitHub Secrets or Streamlit secrets)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Check if the API key is available
-if not OPENAI_API_KEY:
-    st.error("⚠️ Missing OpenAI API Key. Please set it as an environment variable (e.g., in GitHub Secrets or Streamlit secrets).")
+# Load API Key from Streamlit Secrets
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("⚠️ Missing OpenAI API Key. Please set it in `.streamlit/secrets.toml` or Streamlit Cloud secrets.")
     st.stop()
+
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -74,3 +72,4 @@ for label, interval in intervals.items():
         st.write(analysis)
     else:
         st.error(f"⚠️ Failed to fetch {label} forex data. Check Yahoo Finance API!")
+
