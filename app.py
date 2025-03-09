@@ -1,14 +1,14 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
-import os
 from openai import OpenAI, OpenAIError
 
-# Load API Key from Streamlit Secrets
+# ✅ Debugging: Check if API key is loaded correctly
 if "OPENAI_API_KEY" not in st.secrets:
     st.error("⚠️ Missing OpenAI API Key. Please set it in `.streamlit/secrets.toml` or Streamlit Cloud secrets.")
     st.stop()
 
+# Load OpenAI API key securely from Streamlit secrets
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 # Initialize OpenAI client
@@ -50,6 +50,9 @@ def analyze_trends(data):
 
 # Streamlit UI
 st.title("📈 EUR/USD Forex Signal Analyzer")
+
+# ✅ Debugging: Show a success message if API key is loaded correctly
+st.success("✅ OpenAI API Key Loaded Successfully!")  
 
 # Fetch and display forex data
 intervals = {"15m": "15m", "5m": "5m"}
