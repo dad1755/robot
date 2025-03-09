@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from openai import OpenAI, OpenAIError
 
-# OpenAI API Key (Set your key here)
-OPENAI_API_KEY = "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"
+import os
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
