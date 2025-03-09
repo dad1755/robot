@@ -37,7 +37,7 @@ def analyze_trends(data):
         completion = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a financial analyst, based on chart pattern, BUY or Sell?."},
+                {"role": "system", "content": "You are a financial analyst, based on chart pattern, just answer BUY or Sell?."},
                 {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
             ]
         )
