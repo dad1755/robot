@@ -1,17 +1,19 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
-import openai
 import numpy as np
-from openai import OpenAIError  # ✅ Fix import issue
+from openai import OpenAI, OpenAIError
 
 # OpenAI API Key (Set your key here)
 OPENAI_API_KEY = "your-api-key"
 
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 # Fetch EUR/USD Forex Data
-def fetch_forex_data():
+def fetch_forex_data(interval):
     try:
-        data = yf.download("EURUSD=X", period="6mo", interval="1d")
+        data = yf.download("EURUSD=X", period="1d", interval=interval)
         return data
     except Exception as e:
         return None
@@ -22,49 +24,46 @@ def analyze_trends(data):
         return "⚠️ No data available for analysis."
 
     try:
-        # Extract key stats
         latest_price = data["Close"].iloc[-1]
         prev_price = data["Close"].iloc[-2]
-        price_change = float(latest_price - prev_price)  # Convert to scalar
+        price_change = float(latest_price - prev_price)
         trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
 
-        # OpenAI API Call
-        openai.api_key = OPENAI_API_KEY
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a financial analyst."},
                 {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
             ]
         )
-        return response["choices"][0]["message"]["content"]
+        return response.choices[0].message.content
 
-    except OpenAIError as e:  # ✅ FIXED
+    except OpenAIError as e:
         return f"⚠️ AI Analysis Error: {str(e)}"
     except Exception as e:
         return f"⚠️ Unexpected Error: {str(e)}"
 
 # Streamlit UI
-st.title("📈 Automated Trading Signal Analyzer")
+st.title("📈 EUR/USD Forex Signal Analyzer")
 
-# Fetch & display forex data
-forex_data = fetch_forex_data()
+# Fetch 15m and 5m forex data
+intervals = {"15m": "15m", "5m": "5m"}
+for label, interval in intervals.items():
+    st.subheader(f"📊 EUR/USD {label} Chart")
+    forex_data = fetch_forex_data(interval)
 
-if forex_data is not None and not forex_data.empty:
-    st.subheader("📊 EUR/USD 6-Month Chart")
+    if forex_data is not None and not forex_data.empty:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(forex_data.index, forex_data["Close"], label="Close Price", color="blue")
+        ax.set_title(f"EUR/USD Forex Chart ({label})")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Price")
+        ax.legend()
+        st.pyplot(fig)
 
-    # Plot forex chart
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(forex_data.index, forex_data["Close"], label="Close Price", color="blue")
-    ax.set_title("EUR/USD Forex Chart (6 Months)")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Price")
-    ax.legend()
-    st.pyplot(fig)
-
-    # Analyze with AI
-    st.subheader("🔥 AI Analysis:")
-    analysis = analyze_trends(forex_data)
-    st.write(analysis)
-else:
-    st.error("⚠️ Failed to fetch forex data. Check Yahoo Finance API!")
+        # AI Analysis
+        st.subheader("🔥 AI Analysis:")
+        analysis = analyze_trends(forex_data)
+        st.write(analysis)
+    else:
+        st.error(f"⚠️ Failed to fetch {label} forex data. Check Yahoo Finance API!")
