@@ -4,16 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from openai import OpenAI, OpenAIError
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-
-# Get API Key from environment
+# Get API Key from environment variables (e.g., GitHub Secrets or Streamlit secrets)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Check if the API key is available
 if not OPENAI_API_KEY:
-    st.error("⚠️ Missing OpenAI API Key. Set it as an environment variable.")
+    st.error("⚠️ Missing OpenAI API Key. Please set it as an environment variable (e.g., in GitHub Secrets or Streamlit secrets).")
     st.stop()
 
 # Initialize OpenAI client
