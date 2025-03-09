@@ -3,7 +3,6 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import openai
 import numpy as np
-import openai.error  # Ensure OpenAI error handling is included
 
 # OpenAI API Key (Set your key here)
 OPENAI_API_KEY = "your-api-key"
@@ -43,7 +42,7 @@ def analyze_trends(data):
         )
         return response["choices"][0]["message"]["content"]
 
-    except openai.error.OpenAIError as e:
+    except openai.error.OpenAIError as e:  # ✅ FIX: No need to import separately
         return f"⚠️ AI Analysis Error: {str(e)}"
     except Exception as e:
         return f"⚠️ Unexpected Error: {str(e)}"
@@ -72,4 +71,3 @@ if forex_data is not None and not forex_data.empty:
     st.write(analysis)
 else:
     st.error("⚠️ Failed to fetch forex data. Check Yahoo Finance API!")
-
