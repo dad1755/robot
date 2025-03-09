@@ -1,43 +1,4 @@
-import streamlit as st
-import yfinance as yf
-import matplotlib.pyplot as plt
-from openai import OpenAI, OpenAIError
-import pandas as pd
-
-def fetch_forex_data(interval):
-    try:
-        # Use 1-day period to get sufficient data
-        data = yf.download("EURUSD=X", period="1d", interval=interval)
-        
-        if data is None or data.empty:
-            return None
-        
-        # Convert index to datetime (if not already)
-        data.index = pd.to_datetime(data.index)
-
-        # Get the latest time available
-        latest_time = data.index[-1]
-
-        # Define lookback periods
-        if interval == "15m":
-            cutoff_time = latest_time - pd.Timedelta(hours=3)
-        elif interval == "5m":
-            cutoff_time = latest_time - pd.Timedelta(minutes=90)
-        else:
-            return data  # Return unfiltered data for unsupported intervals
-
-        # Filter data for the desired timeframe
-        filtered_data = data[data.index >= cutoff_time]
-
-        return filtered_data if not filtered_data.empty else None
-    
-    except Exception as e:
-        st.error(f"⚠️ Error fetching forex data: {e}")
-        return None
-
-# ✅ Debugging: Check if API key is loaded correctly
-if "OPENAI_API_KEY" not in st.secrets:
-    st.error("⚠️ Missing OpenAI API Key. Please set it in .streamlit/secrets.toml or Streamlit Cloud secrets.")
+nAI API Key. Please set it in .streamlit/secrets.toml or Streamlit Cloud secrets.")
     st.stop()
 
 # Load OpenAI API key securely from Streamlit secrets
@@ -47,21 +8,13 @@ OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Function to fetch EUR/USD Forex Data
-# Function to fetch EUR/USD Forex Data for specific periods
 def fetch_forex_data(interval):
-    period_mapping = {
-        "15m": "3h",  # 15-minute interval for the last 3 hours
-        "5m": "1h"   # 5-minute interval for the last 1.5 hours
-    }
-    
     try:
-        period = period_mapping.get(interval, "1d")  # Default to 1 day if interval not found
-        data = yf.download("EURUSD=X", period=period, interval=interval)
+        data = yf.download("EURUSD=X", period="1d", interval=interval)
         return data if not data.empty else None
     except Exception as e:
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
-
 
 # Function to analyze forex trends with AI
 def analyze_trends(data):
