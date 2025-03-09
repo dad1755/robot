@@ -1,4 +1,11 @@
-nAI API Key. Please set it in .streamlit/secrets.toml or Streamlit Cloud secrets.")
+import streamlit as st
+import yfinance as yf
+import matplotlib.pyplot as plt
+from openai import OpenAI, OpenAIError
+
+# ✅ Debugging: Check if API key is loaded correctly
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("⚠️ Missing OpenAI API Key. Please set it in .streamlit/secrets.toml or Streamlit Cloud secrets.")
     st.stop()
 
 # Load OpenAI API key securely from Streamlit secrets
