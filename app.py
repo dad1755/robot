@@ -9,58 +9,76 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
+# OpenAI API Key (Set your key here)
+OPENAI_API_KEY = "your-api-key"
+
 def get_screenshot():
-    """Captures a screenshot of the EUR/USD chart from Yahoo Finance."""
-    url = "https://finance.yahoo.com/quote/EURUSD=X/chart"  # Direct chart link
-    
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run in headless mode
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    
     try:
+        # Setup Chrome options
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+
+        # Install & setup ChromeDriver
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        # Open Yahoo Finance EUR/USD chart
+        url = "https://finance.yahoo.com/quote/EURUSD=X/chart"
         driver.get(url)
-        time.sleep(5)  # Wait for chart to load
-        screenshot_path = "chart_screenshot.png"
+        time.sleep(5)  # Allow chart to load
+
+        # Screenshot
+        screenshot_path = "chart.png"
         driver.save_screenshot(screenshot_path)
         driver.quit()
+
         return screenshot_path
+
     except Exception as e:
-        driver.quit()
-        st.error(f"Failed to capture screenshot: {e}")
+        st.error(f"WebDriver Error: {e}")
         return None
 
-def extract_chart_data(image_path):
-    """Extracts price data from the chart screenshot using OCR."""
-    image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray)
-    return text
+def analyze_chart_with_ai(image_path):
+    """Extracts text from the image and sends it to ChatGPT for analysis."""
+    try:
+        # Load image
+        img = cv2.imread(image_path)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-def analyze_chart_with_gpt(text_data):
-    """Sends extracted data to ChatGPT for market trend analysis."""
-    openai.api_key = "your-openai-api-key"  # Replace with your API key
-    
-    response = openai.ChatCompletion.create(
-        model="gpt-4-vision-preview",
-        messages=[
-            {"role": "system", "content": "Analyze the given market data and provide a trading signal (BUY, SELL, HOLD)."},
-            {"role": "user", "content": text_data}
-        ]
-    )
-    return response["choices"][0]["message"]["content"]
+        # Extract text using Tesseract OCR
+        extracted_text = pytesseract.image_to_string(gray)
+
+        if not extracted_text.strip():
+            return "⚠️ No readable text found in the chart."
+
+        # Send to OpenAI API for analysis
+        openai.api_key = OPENAI_API_KEY
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert financial analyst."},
+                {"role": "user", "content": f"Analyze this forex chart data: {extracted_text}"}
+            ]
+        )
+
+        return response["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"AI Analysis Error: {e}"
 
 # Streamlit UI
 st.title("📈 Automated Trading Signal Analyzer")
-if st.button("Capture & Analyze Chart"):
-    screenshot_file = get_screenshot()
-    if screenshot_file:
-        st.image(screenshot_file, caption="Captured Chart", use_column_width=True)
-        extracted_data = extract_chart_data(screenshot_file)
-        trading_signal = analyze_chart_with_gpt(extracted_data)
-        st.subheader("📊 Trading Signal:")
-        st.write(trading_signal)
+
+screenshot_file = get_screenshot()
+if screenshot_file:
+    st.image(screenshot_file, caption="Captured Chart Screenshot")
+    
+    # Analyze chart with AI
+    analysis = analyze_chart_with_ai(screenshot_file)
+    st.subheader("🔥 AI Analysis:")
+    st.write(analysis)
+else:
+    st.error("⚠️ Failed to capture screenshot. Check WebDriver setup!")
