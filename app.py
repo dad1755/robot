@@ -5,7 +5,7 @@ import numpy as np
 from openai import OpenAI, OpenAIError
 
 # OpenAI API Key (Set your key here)
-OPENAI_API_KEY = "your-api-key"
+OPENAI_API_KEY = "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"
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
