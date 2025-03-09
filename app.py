@@ -3,6 +3,7 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import openai
 import numpy as np
+from openai import OpenAIError  # ✅ Fix import issue
 
 # OpenAI API Key (Set your key here)
 OPENAI_API_KEY = "your-api-key"
@@ -11,11 +12,8 @@ OPENAI_API_KEY = "your-api-key"
 def fetch_forex_data():
     try:
         data = yf.download("EURUSD=X", period="6mo", interval="1d")
-        if data.empty:
-            raise ValueError("No data fetched from Yahoo Finance")
         return data
     except Exception as e:
-        st.error(f"⚠️ Error fetching forex data: {str(e)}")
         return None
 
 # Analyze Forex Trends with AI
@@ -28,7 +26,6 @@ def analyze_trends(data):
         latest_price = data["Close"].iloc[-1]
         prev_price = data["Close"].iloc[-2]
         price_change = float(latest_price - prev_price)  # Convert to scalar
-
         trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
 
         # OpenAI API Call
@@ -42,7 +39,7 @@ def analyze_trends(data):
         )
         return response["choices"][0]["message"]["content"]
 
-    except openai.error.OpenAIError as e:  # ✅ FIX: No need to import separately
+    except OpenAIError as e:  # ✅ FIXED
         return f"⚠️ AI Analysis Error: {str(e)}"
     except Exception as e:
         return f"⚠️ Unexpected Error: {str(e)}"
