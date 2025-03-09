@@ -8,4 +8,6 @@ numpy
 yfinance
 matplotlib
 python-dotenv
+pandas-ta
+
 
