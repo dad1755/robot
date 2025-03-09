@@ -10,8 +10,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-# Fix OpenCV missing libGL issue
-os.system("apt-get update && apt-get install -y libgl1-mesa-glx")
+
 
 # Set up Selenium for taking screenshots
 def get_screenshot(url, filename="screenshot.png"):
