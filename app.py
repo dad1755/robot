@@ -35,7 +35,7 @@ def analyze_trends(data):
         trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
 
         completion = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a financial analyst."},
                 {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
