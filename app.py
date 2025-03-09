@@ -17,29 +17,48 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # Function to fetch EUR/USD Forex Data
 def fetch_forex_data(interval):
     try:
-        data = yf.download("EURUSD=X", period="1d", interval=interval)
-        return data if not data.empty else None
+        data = yf.download("EURUSD=X", period="5d", interval=interval)  # Increased period to ensure enough data
+        if data.empty:
+            st.warning(f"⚠️ No data fetched for {interval}. API might be down.")
+            return None
+        return data
     except Exception as e:
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
 
 # Function to add technical indicators
 def add_indicators(data):
-    data["SMA_50"] = ta.sma(data["Close"], length=50)
-    data["EMA_9"] = ta.ema(data["Close"], length=9)
-    data["RSI"] = ta.rsi(data["Close"], length=14)
-    
-    macd = ta.macd(data["Close"])
-    data["MACD"] = macd["MACD_12_26_9"]
-    data["MACD_Signal"] = macd["MACDs_12_26_9"]
-    
-    bb = ta.bbands(data["Close"], length=20)
-    data["Upper_BB"] = bb["BBU_20_2.0"]
-    data["Middle_BB"] = bb["BBM_20_2.0"]
-    data["Lower_BB"] = bb["BBL_20_2.0"]
-    
-    data["ATR"] = ta.atr(data["High"], data["Low"], data["Close"], length=14)
-    
+    if data is None or data.empty:
+        return data  # Prevent errors if data is missing
+
+    try:
+        data["SMA_50"] = ta.sma(data["Close"], length=50)
+        data["EMA_9"] = ta.ema(data["Close"], length=9)
+        data["RSI"] = ta.rsi(data["Close"], length=14)
+
+        # Handle MACD
+        macd = ta.macd(data["Close"])
+        if macd is not None and "MACD_12_26_9" in macd:
+            data["MACD"] = macd["MACD_12_26_9"]
+            data["MACD_Signal"] = macd["MACDs_12_26_9"]
+        else:
+            data["MACD"] = data["MACD_Signal"] = None
+
+        # Handle Bollinger Bands
+        bb = ta.bbands(data["Close"], length=20)
+        if bb is not None and "BBU_20_2.0" in bb:
+            data["Upper_BB"] = bb["BBU_20_2.0"]
+            data["Middle_BB"] = bb["BBM_20_2.0"]
+            data["Lower_BB"] = bb["BBL_20_2.0"]
+        else:
+            data["Upper_BB"] = data["Middle_BB"] = data["Lower_BB"] = None
+
+        # Handle ATR
+        data["ATR"] = ta.atr(data["High"], data["Low"], data["Close"], length=14)
+
+    except Exception as e:
+        st.error(f"⚠️ Indicator Error: {e}")
+
     return data
 
 # Streamlit UI
@@ -56,38 +75,48 @@ for label, interval in intervals.items():
     
     if forex_data is not None:
         forex_data = add_indicators(forex_data)
-        
+
         fig, ax = plt.subplots(figsize=(10, 5))
         ax.plot(forex_data.index, forex_data["Close"], label="Close Price", color="blue")
-        ax.plot(forex_data.index, forex_data["SMA_50"], label="SMA 50", linestyle="--", color="orange")
-        ax.plot(forex_data.index, forex_data["EMA_9"], label="EMA 9", linestyle="--", color="red")
-        ax.fill_between(forex_data.index, forex_data["Lower_BB"], forex_data["Upper_BB"], color='gray', alpha=0.3, label="Bollinger Bands")
+
+        if "SMA_50" in forex_data:
+            ax.plot(forex_data.index, forex_data["SMA_50"], label="SMA 50", linestyle="--", color="orange")
+
+        if "EMA_9" in forex_data:
+            ax.plot(forex_data.index, forex_data["EMA_9"], label="EMA 9", linestyle="--", color="red")
+
+        if "Upper_BB" in forex_data and forex_data["Upper_BB"].isnull().sum() == 0:
+            ax.fill_between(forex_data.index, forex_data["Lower_BB"], forex_data["Upper_BB"], color='gray', alpha=0.3, label="Bollinger Bands")
+
         ax.set_title(f"EUR/USD Forex Chart ({label})")
         ax.set_xlabel("Time")
         ax.set_ylabel("Price")
         ax.legend()
         st.pyplot(fig)
-        
+
         # RSI Plot
-        fig, ax = plt.subplots(figsize=(10, 2))
-        ax.plot(forex_data.index, forex_data["RSI"], label="RSI", color="purple")
-        ax.axhline(70, linestyle="--", color="red", alpha=0.5)
-        ax.axhline(30, linestyle="--", color="green", alpha=0.5)
-        ax.set_title("Relative Strength Index (RSI)")
-        st.pyplot(fig)
-        
+        if "RSI" in forex_data:
+            fig, ax = plt.subplots(figsize=(10, 2))
+            ax.plot(forex_data.index, forex_data["RSI"], label="RSI", color="purple")
+            ax.axhline(70, linestyle="--", color="red", alpha=0.5)
+            ax.axhline(30, linestyle="--", color="green", alpha=0.5)
+            ax.set_title("Relative Strength Index (RSI)")
+            st.pyplot(fig)
+
         # MACD Plot
-        fig, ax = plt.subplots(figsize=(10, 2))
-        ax.plot(forex_data.index, forex_data["MACD"], label="MACD", color="blue")
-        ax.plot(forex_data.index, forex_data["MACD_Signal"], label="Signal Line", color="red")
-        ax.axhline(0, linestyle="--", color="gray", alpha=0.5)
-        ax.set_title("MACD")
-        st.pyplot(fig)
-        
+        if "MACD" in forex_data and forex_data["MACD"].isnull().sum() == 0:
+            fig, ax = plt.subplots(figsize=(10, 2))
+            ax.plot(forex_data.index, forex_data["MACD"], label="MACD", color="blue")
+            ax.plot(forex_data.index, forex_data["MACD_Signal"], label="Signal Line", color="red")
+            ax.axhline(0, linestyle="--", color="gray", alpha=0.5)
+            ax.set_title("MACD")
+            st.pyplot(fig)
+
         # ATR Plot
-        fig, ax = plt.subplots(figsize=(10, 2))
-        ax.plot(forex_data.index, forex_data["ATR"], label="ATR", color="black")
-        ax.set_title("Average True Range (ATR)")
-        st.pyplot(fig)
+        if "ATR" in forex_data:
+            fig, ax = plt.subplots(figsize=(10, 2))
+            ax.plot(forex_data.index, forex_data["ATR"], label="ATR", color="black")
+            ax.set_title("Average True Range (ATR)")
+            st.pyplot(fig)
     else:
         st.error(f"⚠️ Failed to fetch {label} forex data. Check Yahoo Finance API!")
