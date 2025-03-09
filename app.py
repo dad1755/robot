@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Set OpenAI API Key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+openai.api_key = st.secrets["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"]
 
 # Function to Capture Screenshot using Selenium
 def capture_screenshot(url, save_path):
