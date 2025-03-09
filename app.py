@@ -5,7 +5,7 @@ import numpy as np
 from openai import OpenAI, OpenAIError
 
 # OpenAI API Key (Set your key here)
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 
 # Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -29,14 +29,14 @@ def analyze_trends(data):
         price_change = float(latest_price - prev_price)
         trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
 
-        response = client.chat.completions.create(
-            model="gpt-4",
+        completion = client.chat.completions.create(
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a financial analyst."},
                 {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
             ]
         )
-        return response.choices[0].message.content
+        return completion.choices[0].message.content
 
     except OpenAIError as e:
         return f"⚠️ AI Analysis Error: {str(e)}"
