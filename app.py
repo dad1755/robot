@@ -2,7 +2,7 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 import pandas as pd
-import pandas_ta as ta  # Replacing talib with pandas_ta
+import pandas_ta as ta  # Using pandas_ta correctly
 from openai import OpenAI, OpenAIError
 
 # ✅ Debugging: Check if API key is loaded correctly
@@ -25,17 +25,21 @@ def fetch_forex_data(interval):
 
 # Function to add technical indicators
 def add_indicators(data):
-    data["SMA_50"] = data["Close"].ta.sma(50)
-    data["EMA_9"] = data["Close"].ta.ema(9)
-    data["RSI"] = data["Close"].ta.rsi(14)
-    macd = data["Close"].ta.macd()
+    data["SMA_50"] = ta.sma(data["Close"], length=50)
+    data["EMA_9"] = ta.ema(data["Close"], length=9)
+    data["RSI"] = ta.rsi(data["Close"], length=14)
+    
+    macd = ta.macd(data["Close"])
     data["MACD"] = macd["MACD_12_26_9"]
     data["MACD_Signal"] = macd["MACDs_12_26_9"]
-    bb = data["Close"].ta.bbands(length=20)
+    
+    bb = ta.bbands(data["Close"], length=20)
     data["Upper_BB"] = bb["BBU_20_2.0"]
     data["Middle_BB"] = bb["BBM_20_2.0"]
     data["Lower_BB"] = bb["BBL_20_2.0"]
-    data["ATR"] = data.ta.atr(14)
+    
+    data["ATR"] = ta.atr(data["High"], data["Low"], data["Close"], length=14)
+    
     return data
 
 # Streamlit UI
