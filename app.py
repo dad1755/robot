@@ -1,63 +1,55 @@
-import streamlit as st
+import os
 import time
-import cv2
+import streamlit as st
 import numpy as np
 import openai
+import cv2
+import pytesseract
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 
-# Set OpenAI API Key
-openai.api_key = st.secrets["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"]
+# Fix OpenCV missing libGL issue
+os.system("apt-get update && apt-get install -y libgl1-mesa-glx")
 
-# Function to Capture Screenshot using Selenium
-def capture_screenshot(url, save_path):
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    options.add_argument("--window-size=1920,1080")
+# Set up Selenium for taking screenshots
+def get_screenshot(url, filename="screenshot.png"):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920x1080")
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     driver.get(url)
-
-    time.sleep(5)  # Wait for the page to load
-
-    driver.save_screenshot(save_path)
+    time.sleep(5)  # Wait for page to load
+    driver.save_screenshot(filename)
     driver.quit()
-    return save_path
+    return filename
 
-# Preprocess the Image for Pattern Recognition
-def preprocess_image(image_path):
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    image = cv2.GaussianBlur(image, (5, 5), 0)
-    edges = cv2.Canny(image, 50, 150)  # Edge detection
-    return edges
+# Image processing using OpenCV & OCR
+def process_chart(filename):
+    image = cv2.imread(filename)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    text = pytesseract.image_to_string(gray)
+    return text
 
-# Send Image to ChatGPT Vision API for Pattern Recognition
-def analyze_chart_with_chatgpt(image_path):
-    with open(image_path, "rb") as img_file:
-        response = openai.ChatCompletion.create(
-            model="gpt-4-vision-preview",
-            messages=[
-                {"role": "system", "content": "You are a professional stock market analyst. Analyze the chart pattern and provide a buy/sell recommendation."},
-                {"role": "user", "content": "What is the trend in this stock chart?"},
-                {"role": "user", "content": {"image": img_file}}
-            ]
-        )
+# Send chart data to OpenAI for analysis
+def analyze_chart(text):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": f"Analyze this chart data and give trading signal:\n{text}"}]
+    )
     return response["choices"][0]["message"]["content"]
 
 # Streamlit UI
-st.title("📊 Automated Stock Market Chart Analysis")
-
-yahoo_finance_url = "https://finance.yahoo.com"
-
-if st.button("Capture & Analyze Yahoo Finance Chart"):
-    screenshot_path = capture_screenshot(yahoo_finance_url, "chart.png")
-    edges = preprocess_image(screenshot_path)
-    
-    st.image(edges, caption="Processed Chart", channels="GRAY")
-
-    with st.spinner("Analyzing chart pattern..."):
-        analysis = analyze_chart_with_chatgpt(screenshot_path)
-        st.write("📈 **Analysis Result:**")
-        st.write(analysis)
+st.title("Automated Trading Signal Analyzer")
+url = st.text_input("Enter Yahoo Finance Chart URL:", "https://finance.yahoo.com/")
+if st.button("Analyze Chart"):
+    screenshot_file = get_screenshot(url)
+    chart_data = process_chart(screenshot_file)
+    signal = analyze_chart(chart_data)
+    st.image(screenshot_file, caption="Captured Chart", use_column_width=True)
+    st.write("### Trading Signal")
+    st.write(signal)
