@@ -1,70 +1,64 @@
 import streamlit as st
-import requests
-import cv2
-import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
 import openai
-import pytesseract
-from PIL import Image
-from io import BytesIO
+import numpy as np
 
 # OpenAI API Key (Set your key here)
 OPENAI_API_KEY = "your-api-key"
 
-# Yahoo Finance Chart Image URL
-YAHOO_CHART_URL = "https://chart.finance.yahoo.com/z?s=EURUSD=X&t=6m&q=l&l=on&z=l&p=m50,m200"
-
-def fetch_chart():
-    """Fetch the Yahoo Finance chart image directly."""
+# Fetch EUR/USD Forex Data
+def fetch_forex_data():
     try:
-        response = requests.get(YAHOO_CHART_URL)
-        if response.status_code == 200:
-            return response.content
-        else:
-            return None
+        data = yf.download("EURUSD=X", period="6mo", interval="1d")
+        return data
     except Exception as e:
         return None
 
-def analyze_chart_with_ai(image_data):
-    """Extracts text from the image and sends it to ChatGPT for analysis."""
-    try:
-        # Load image
-        image = Image.open(BytesIO(image_data))
-        img_array = np.array(image)
+# Analyze Forex Trends with AI
+def analyze_trends(data):
+    if data is None or data.empty:
+        return "⚠️ No data available for analysis."
 
-        # Convert to grayscale for OCR
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    # Extract key stats
+    latest_price = data["Close"].iloc[-1]
+    price_change = latest_price - data["Close"].iloc[-2]
+    trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
 
-        # Extract text using Tesseract OCR
-        extracted_text = pytesseract.image_to_string(gray)
-
-        if not extracted_text.strip():
-            return "⚠️ No readable text found in the chart."
-
-        # Send extracted data to OpenAI for analysis
-        openai.api_key = OPENAI_API_KEY
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an expert financial analyst."},
-                {"role": "user", "content": f"Analyze this forex chart data: {extracted_text}"}
-            ]
-        )
-
-        return response["choices"][0]["message"]["content"]
-
-    except Exception as e:
-        return f"AI Analysis Error: {e}"
+    # Send to OpenAI for analysis
+    openai.api_key = OPENAI_API_KEY
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a financial analyst."},
+            {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
+        ]
+    )
+    
+    return response["choices"][0]["message"]["content"]
 
 # Streamlit UI
 st.title("📈 Automated Trading Signal Analyzer")
 
-chart_data = fetch_chart()
-if chart_data:
-    st.image(chart_data, caption="Captured Yahoo Finance Chart")
-    
-    # Analyze chart with AI
-    analysis = analyze_chart_with_ai(chart_data)
+# Fetch & display forex data
+forex_data = fetch_forex_data()
+
+if forex_data is not None and not forex_data.empty:
+    st.subheader("📊 EUR/USD 6-Month Chart")
+
+    # Plot forex chart
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(forex_data.index, forex_data["Close"], label="Close Price", color="blue")
+    ax.set_title("EUR/USD Forex Chart (6 Months)")
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Price")
+    ax.legend()
+    st.pyplot(fig)
+
+    # Analyze with AI
     st.subheader("🔥 AI Analysis:")
+    analysis = analyze_trends(forex_data)
     st.write(analysis)
 else:
-    st.error("⚠️ Failed to fetch chart. Check Yahoo Finance URL!")
+    st.error("⚠️ Failed to fetch forex data. Check Yahoo Finance API!")
+
