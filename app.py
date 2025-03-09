@@ -19,7 +19,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def fetch_forex_data(interval):
     period_mapping = {
         "15m": "3h",  # 15-minute interval for the last 3 hours
-        "5m": "90m"   # 5-minute interval for the last 1.5 hours
+        "5m": "1h"   # 5-minute interval for the last 1.5 hours
     }
     
     try:
