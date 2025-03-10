@@ -27,29 +27,29 @@ def fetch_forex_data(interval):
 def save_chart_as_base64(data, interval):
     # Remove weekends (Saturday=5, Sunday=6)
     data = data[data.index.dayofweek < 5]  
-
+    
     fig, ax = plt.subplots(figsize=(10, 5))
-    
-    # Plot without empty weekend gaps
+
+    # Ensure x-axis only contains valid trading timestamps (no gaps)
     ax.plot(data.index, data["Close"], label="Close Price", color="blue")
-    
+
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
     ax.set_xlabel("Time")
     ax.set_ylabel("Price")
     ax.legend()
     
-    # Fix x-axis: show only actual trading days
-    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))  # Avoid weekend gaps
+    # Format x-axis to remove weekend gaps
+    ax.set_xticks(data.index)  # Only show actual trading timestamps
+    ax.set_xticklabels([d.strftime("%Y-%m-%d %H:%M") for d in data.index], rotation=45, ha="right")
 
     img_buf = io.BytesIO()
-    plt.savefig(img_buf, format="png")
+    plt.savefig(img_buf, format="png", bbox_inches="tight")  # Ensure full labels are visible
     img_buf.seek(0)
 
     # Convert image to Base64 string
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
     
     return img_base64
-
 
 # Analyze forex pattern with GPT-4 Vision
 def analyze_chart_pattern(image_base64):
