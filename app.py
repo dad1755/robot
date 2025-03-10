@@ -3,7 +3,6 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import datetime
 import io
-import base64
 from openai import OpenAI, OpenAIError
 
 # Load OpenAI API Key
@@ -23,8 +22,8 @@ def fetch_forex_data(interval):
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
 
-# Save chart as an image and return Base64 string
-def save_chart_as_base64(data, interval):
+# Save chart as an image
+def save_chart_as_image(data, interval):
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(data.index, data["Close"], label="Close Price", color="blue")
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
@@ -35,25 +34,21 @@ def save_chart_as_base64(data, interval):
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format="png")
     img_buf.seek(0)
+    
+    return img_buf
 
-    img_base64 = base64.b64encode(img_buf.read()).decode("utf-8")
-    return img_base64
-
-# Analyze forex pattern with AI and show token count
-def analyze_chart_pattern(image_base64):
+# Analyze forex pattern with AI using image input
+def analyze_chart_pattern(image_bytes):
     try:
-        messages = [
-            {"role": "system", "content": "You are a technical analyst. Identify the forex pattern from the chart and give a decision: BUY or SELL."},
-            {"role": "user", "content": f"Here is the EUR/USD forex chart in Base64 format:\n{image_base64}"}
-        ]
-
         completion = client.chat.completions.create(
             model="gpt-4o",
-            messages=messages
+            messages=[
+                {"role": "system", "content": "You are a professional technical analyst. Look at the forex chart and provide a clear decision: BUY or SELL, based on chart patterns."}
+            ],
+            images=[{"type": "bytes", "data": image_bytes.getvalue()}]  # ✅ Send actual image file
         )
 
-        # Get token usage
-        tokens_used = completion.usage.total_tokens
+        tokens_used = completion.usage.total_tokens  # ✅ Get token usage
 
         return f"📊 AI Analysis Result:\n\n{completion.choices[0].message.content}\n\n⚡ Tokens Used: {tokens_used}"
 
@@ -102,13 +97,13 @@ for label, interval in intervals.items():
     forex_data = st.session_state.forex_data.get(interval)
 
     if forex_data is not None:
-        img_base64 = save_chart_as_base64(forex_data, label)
-        st.image(io.BytesIO(base64.b64decode(img_base64)), caption=f"{label} Forex Chart", use_container_width=True)
+        img_bytes = save_chart_as_image(forex_data, label)
+        st.image(img_bytes, caption=f"{label} Forex Chart", use_container_width=True)
 
         # AI Pattern Analysis
         st.subheader("🔥 AI Pattern Analysis:")
         if interval not in st.session_state.analysis:
-            st.session_state.analysis[interval] = analyze_chart_pattern(img_base64)
+            st.session_state.analysis[interval] = analyze_chart_pattern(img_bytes)
 
         st.write(st.session_state.analysis[interval])
     else:
