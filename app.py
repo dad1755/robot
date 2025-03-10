@@ -17,7 +17,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # Fetch EUR/USD Forex Data
 def fetch_forex_data(interval):
     try:
-        data = yf.download("EURUSD=X", period="1d", interval=interval)
+        data = yf.download("EURUSD=X", period="2d", interval=interval)
         return data if not data.empty else None
     except Exception as e:
         st.error(f"⚠️ Error fetching forex data: {e}")
