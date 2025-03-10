@@ -23,20 +23,22 @@ def fetch_forex_data(interval):
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
 
+import pandas as pd
 import numpy as np
 
 def save_chart_as_base64(data, interval):
+    if data is None or data.empty:
+        return None  # Handle empty data
+
+    # Convert index to datetime (if not already)
+    data.index = pd.to_datetime(data.index)
+
     # Remove weekends (Saturday=5, Sunday=6)
     data = data[data.index.dayofweek < 5]
 
-    # Insert NaN for missing times to prevent weekend gaps
-    all_times = pd.date_range(start=data.index.min(), end=data.index.max(), freq='15T')
-    data = data.reindex(all_times)  # Ensure uniform 15-min intervals
-    data.loc[data.index.dayofweek >= 5, "Close"] = np.nan  # Set weekends to NaN
-
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    # Plot with NaN gaps (so weekends are not connected)
+    # Plot without connecting missing data
     ax.plot(data.index, data["Close"], linestyle='solid', marker=None, color="blue")
 
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
@@ -56,7 +58,6 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
 
     return img_base64
-
 
 
 # Analyze forex pattern with GPT-4 Vision
