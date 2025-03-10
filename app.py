@@ -1,7 +1,6 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
-import time
 import datetime
 from openai import OpenAI, OpenAIError
 
@@ -53,7 +52,7 @@ def analyze_trends(data):
 # Streamlit UI
 st.title("📈 EUR/USD Forex Signal Analyzer")
 
-# ✅ Debugging: Show a success message if API key is loaded correctly
+# ✅ Show a success message if API key is loaded correctly
 st.success("✅ OpenAI API Key Loaded Successfully!")  
 
 # Initialize session state for tracking updates
@@ -78,7 +77,7 @@ if time_since_update >= update_interval:
     st.session_state.forex_data.clear()
     st.session_state.analysis.clear()
     st.session_state.last_update = datetime.datetime.now()
-    st.rerun()  # This will refresh the app automatically
+    st.rerun()  # Safe way to trigger a rerun
 
 # Fetch and display forex data
 intervals = {"15m": "15m", "5m": "5m"}
@@ -108,7 +107,5 @@ for label, interval in intervals.items():
     else:
         st.error(f"⚠️ Failed to fetch {label} forex data. Check Yahoo Finance API!")
 
-# Auto-refresh countdown
-st.write("⏳ Auto-refreshing...")
-time.sleep(1)
-st.rerun()  # This keeps refreshing automatically every second, but only updates data every 15 minutes
+# Streamlit's built-in auto-refresh
+st.rerun()  # Auto-refresh every 15 minutes
