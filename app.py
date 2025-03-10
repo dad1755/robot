@@ -52,7 +52,7 @@ def analyze_chart_pattern(image_base64):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": "Analyze this EUR/USD forex chart and suggest a BUY or SELL decision based on pattern analysis."},
-                        {"type": "image_url", "image_url": f"data:image/png;base64,{image_base64}"}
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}}
                     ]
                 }
             ],
