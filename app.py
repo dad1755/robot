@@ -38,14 +38,12 @@ def save_chart_as_base64(data, interval):
 
     # ✅ Matplotlib will NOT connect missing points
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(data.index, data["Close"], linestyle='-', color="blue", marker='o', markersize=3)
+    ax.plot(data.index, data["Close"], linestyle='-', color="blue", marker='o', markersize=4)
 
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
     ax.set_xlabel("Time")
     ax.set_ylabel("Price")
-    ax.legend(["Close Price"])
 
-    ax.xaxis_date()
     fig.autofmt_xdate()
 
     img_buf = io.BytesIO()
@@ -56,6 +54,7 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
 
     return img_base64
+
 
 
 
