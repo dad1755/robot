@@ -29,9 +29,10 @@ def save_chart_as_base64(data, interval):
     # Remove weekends (Saturday=5, Sunday=6)
     data = data[data.index.dayofweek < 5]
 
-    # Insert NaN for missing times to break the line across weekends
-    data = data.asfreq('15T')  # Force a uniform time interval (every 15 min)
-    data["Close"] = data["Close"].where(data.index.dayofweek < 5)  # Set weekends to NaN
+    # Insert NaN for missing times to prevent weekend gaps
+    all_times = pd.date_range(start=data.index.min(), end=data.index.max(), freq='15T')
+    data = data.reindex(all_times)  # Ensure uniform 15-min intervals
+    data.loc[data.index.dayofweek >= 5, "Close"] = np.nan  # Set weekends to NaN
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
@@ -55,6 +56,7 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
 
     return img_base64
+
 
 
 # Analyze forex pattern with GPT-4 Vision
