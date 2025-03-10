@@ -25,6 +25,9 @@ def fetch_forex_data(interval):
 
 # Save chart as an image and convert to Base64
 def save_chart_as_base64(data, interval):
+    # Remove weekends (Saturday=5, Sunday=6)
+    data = data[data.index.dayofweek < 5]  
+    
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(data.index, data["Close"], label="Close Price", color="blue")
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
@@ -40,6 +43,7 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
     
     return img_base64
+
 
 # Analyze forex pattern with GPT-4 Vision
 def analyze_chart_pattern(image_base64):
