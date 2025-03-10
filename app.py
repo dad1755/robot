@@ -38,8 +38,8 @@ def save_chart_as_base64(data, interval):
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    # Plot without connecting missing data
-    ax.plot(data.index, data["Close"], linestyle='solid', marker=None, color="blue")
+    # 🚀 FIX: Prevent Matplotlib from drawing straight lines over missing data
+    ax.plot(data.index, data["Close"], linestyle='-', marker='o', color="blue", markersize=3)
 
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
     ax.set_xlabel("Time")
@@ -58,6 +58,7 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
 
     return img_base64
+
 
 
 # Analyze forex pattern with GPT-4 Vision
