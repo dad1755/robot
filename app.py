@@ -2,21 +2,18 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 import datetime
-import time
+import io
 from openai import OpenAI, OpenAIError
 
-# ✅ Check if API key is loaded correctly
+# ✅ Load OpenAI API Key securely
 if "OPENAI_API_KEY" not in st.secrets:
     st.error("⚠️ Missing OpenAI API Key. Please set it in .streamlit/secrets.toml or Streamlit Cloud secrets.")
     st.stop()
 
-# Load OpenAI API key securely from Streamlit secrets
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-
-# Initialize OpenAI client
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Function to fetch EUR/USD Forex Data
+# ✅ Function to fetch EUR/USD Forex Data
 def fetch_forex_data(interval):
     try:
         data = yf.download("EURUSD=X", period="1d", interval=interval)
@@ -25,22 +22,30 @@ def fetch_forex_data(interval):
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
 
-# Function to analyze forex trends with AI
-def analyze_trends(data):
-    if data is None or data.empty:
-        return "⚠️ No data available for analysis."
+# ✅ Function to save chart as an image
+def save_chart_as_image(data, interval):
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(data.index, data["Close"], label="Close Price", color="blue")
+    ax.set_title(f"EUR/USD Forex Chart ({interval})")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Price")
+    ax.legend()
+    
+    # Save the chart as an image
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format="png")
+    img_buf.seek(0)  # Move to the beginning of the file
+    
+    return img_buf
 
+# ✅ Function to analyze forex chart with AI
+def analyze_chart_with_ai(image_buf):
     try:
-        latest_price = data["Close"].iloc[-1]
-        prev_price = data["Close"].iloc[-2]
-        price_change = float(latest_price - prev_price)
-        trend = "uptrend 📈" if price_change > 0 else "downtrend 📉"
-
         completion = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a financial analyst. Based on chart patterns, just answer: BUY or SELL, with the exact price, where to close the order, or when to enter."},
-                {"role": "user", "content": f"Analyze this EUR/USD forex data: {data.tail(5)}. The latest trend is {trend}."}
+                {"role": "system", "content": "You are a financial analyst. Look at the forex chart and provide a BUY or SELL signal with key price levels."},
+                {"role": "user", "content": "Analyze this forex chart and give a recommendation.", "image": image_buf}
             ]
         )
         return completion.choices[0].message.content
@@ -50,10 +55,10 @@ def analyze_trends(data):
     except Exception as e:
         return f"⚠️ Unexpected Error: {str(e)}"
 
-# Streamlit UI
+# ✅ Streamlit UI
 st.title("📈 EUR/USD Forex Signal Analyzer")
 
-# ✅ Show a success message if API key is loaded correctly
+# ✅ Show success message for API key
 st.success("✅ OpenAI API Key Loaded Successfully!")  
 
 # Initialize session state for tracking updates
@@ -66,23 +71,21 @@ if "analysis" not in st.session_state:
 if "last_update" not in st.session_state:
     st.session_state.last_update = datetime.datetime.now()
 
-# Time remaining for next update (15 minutes interval)
+# ✅ Time remaining for next update (15 min interval)
 update_interval = 900  # 15 minutes in seconds
 time_since_update = (datetime.datetime.now() - st.session_state.last_update).total_seconds()
 time_remaining = max(0, update_interval - time_since_update)
 
 st.write(f"🔄 Next update in: {int(time_remaining // 60)} min {int(time_remaining % 60)} sec")
 
-# Fetch and display forex data if time has elapsed
+# ✅ Fetch and display forex data if time has elapsed
 if time_since_update >= update_interval:
     st.session_state.forex_data.clear()
     st.session_state.analysis.clear()
     st.session_state.last_update = datetime.datetime.now()
-    
-    # ✅ Safe way to refresh Streamlit **only when needed**
     st.experimental_rerun()
 
-# Fetch and display forex data
+# ✅ Fetch and analyze forex charts
 intervals = {"15m": "15m", "5m": "5m"}
 for label, interval in intervals.items():
     st.subheader(f"📊 EUR/USD {label} Chart")
@@ -93,18 +96,13 @@ for label, interval in intervals.items():
     forex_data = st.session_state.forex_data.get(interval)
 
     if forex_data is not None:
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(forex_data.index, forex_data["Close"], label="Close Price", color="blue")
-        ax.set_title(f"EUR/USD Forex Chart ({label})")
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Price")
-        ax.legend()
-        st.pyplot(fig)
+        img_buf = save_chart_as_image(forex_data, label)
+        st.image(img_buf, caption=f"{label} Forex Chart", use_column_width=True)
 
-        # AI Analysis
+        # ✅ AI Analysis
         st.subheader("🔥 AI Analysis:")
         if interval not in st.session_state.analysis:
-            st.session_state.analysis[interval] = analyze_trends(forex_data)
+            st.session_state.analysis[interval] = analyze_chart_with_ai(img_buf)
 
         st.write(st.session_state.analysis[interval])
     else:
