@@ -36,17 +36,21 @@ def save_chart_as_base64(data, interval):
     # Remove weekends (Saturday=5, Sunday=6)
     data = data[data.index.dayofweek < 5]
 
+    # 🚀 FIX: Insert NaN for missing timestamps to break the line
+    all_times = pd.date_range(start=data.index.min(), end=data.index.max(), freq='15T')
+    data = data.reindex(all_times)  # Reindex with full range
+    data["Close"] = data["Close"].where(data.index.dayofweek < 5)  # Set weekends to NaN
+
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    # 🚀 FIX: Prevent Matplotlib from drawing straight lines over missing data
-    ax.plot(data.index, data["Close"], linestyle='-', marker='o', color="blue", markersize=3)
+    # ✅ This will break the line instead of drawing through missing data
+    ax.plot(data.index, data["Close"], linestyle='-', color="blue")
 
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
     ax.set_xlabel("Time")
     ax.set_ylabel("Price")
     ax.legend(["Close Price"])
 
-    # Format x-axis correctly
     ax.xaxis_date()
     fig.autofmt_xdate()
 
@@ -58,7 +62,6 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.getvalue()).decode("utf-8")
 
     return img_base64
-
 
 
 # Analyze forex pattern with GPT-4 Vision
