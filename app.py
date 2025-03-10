@@ -23,24 +23,29 @@ def fetch_forex_data(interval):
         st.error(f"⚠️ Error fetching forex data: {e}")
         return None
 
-# Save chart as an image and convert to Base64
+import numpy as np
+
 def save_chart_as_base64(data, interval):
     # Remove weekends (Saturday=5, Sunday=6)
     data = data[data.index.dayofweek < 5]
 
+    # Insert NaN for missing times to break the line across weekends
+    data = data.asfreq('15T')  # Force a uniform time interval (every 15 min)
+    data["Close"] = data["Close"].where(data.index.dayofweek < 5)  # Set weekends to NaN
+
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    # Plot without connecting gaps
-    ax.plot_date(data.index, data["Close"], linestyle='solid', marker=None, color="blue")
+    # Plot with NaN gaps (so weekends are not connected)
+    ax.plot(data.index, data["Close"], linestyle='solid', marker=None, color="blue")
 
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
     ax.set_xlabel("Time")
     ax.set_ylabel("Price")
     ax.legend(["Close Price"])
 
-    # Format x-axis properly
-    ax.xaxis_date()  # Ensures correct date formatting
-    fig.autofmt_xdate()  # Rotates x-axis labels for readability
+    # Format x-axis correctly
+    ax.xaxis_date()
+    fig.autofmt_xdate()
 
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format="png", bbox_inches="tight")
