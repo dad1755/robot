@@ -37,20 +37,26 @@ def save_chart_as_image(data, interval):
     
     return img_buf
 
-# Analyze forex pattern with AI using image input
+# Analyze forex pattern with GPT-4 Vision API
 def analyze_chart_pattern(image_bytes):
     try:
-        completion = client.chat.completions.create(
-            model="gpt-4o",
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional technical analyst. Look at the forex chart and provide a clear decision: BUY or SELL, based on chart patterns."}
+                {"role": "system", "content": "You are a professional forex trader. Analyze the forex chart image and suggest a BUY or SELL decision."},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Analyze this EUR/USD forex chart and suggest a BUY or SELL decision based on pattern analysis."},
+                        {"type": "image", "image": image_bytes.getvalue()}
+                    ]
+                }
             ],
-            images=[{"type": "bytes", "data": image_bytes.getvalue()}]  # ✅ Send actual image file
         )
 
-        tokens_used = completion.usage.total_tokens  # ✅ Get token usage
+        tokens_used = response.usage.total_tokens  # ✅ Get token usage
 
-        return f"📊 AI Analysis Result:\n\n{completion.choices[0].message.content}\n\n⚡ Tokens Used: {tokens_used}"
+        return f"📊 AI Analysis Result:\n\n{response.choices[0].message.content}\n\n⚡ Tokens Used: {tokens_used}"
 
     except OpenAIError as e:
         return f"⚠️ AI Analysis Error: {str(e)}"
