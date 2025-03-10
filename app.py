@@ -27,13 +27,19 @@ def fetch_forex_data(interval):
 def save_chart_as_base64(data, interval):
     # Remove weekends (Saturday=5, Sunday=6)
     data = data[data.index.dayofweek < 5]  
-    
+
     fig, ax = plt.subplots(figsize=(10, 5))
+    
+    # Plot without empty weekend gaps
     ax.plot(data.index, data["Close"], label="Close Price", color="blue")
+    
     ax.set_title(f"EUR/USD Forex Chart ({interval})")
     ax.set_xlabel("Time")
     ax.set_ylabel("Price")
     ax.legend()
+    
+    # Fix x-axis: show only actual trading days
+    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))  # Avoid weekend gaps
 
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format="png")
