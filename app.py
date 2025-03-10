@@ -79,8 +79,8 @@ if time_since_update >= update_interval:
     st.session_state.analysis.clear()
     st.session_state.last_update = datetime.datetime.now()
     
-    # ✅ Streamlit built-in auto-refresh (without flickering)
-    st.set_query_params(refresh=str(time.time()))
+    # ✅ Safe way to refresh Streamlit **only when needed**
+    st.experimental_rerun()
 
 # Fetch and display forex data
 intervals = {"15m": "15m", "5m": "5m"}
@@ -109,6 +109,3 @@ for label, interval in intervals.items():
         st.write(st.session_state.analysis[interval])
     else:
         st.error(f"⚠️ Failed to fetch {label} forex data. Check Yahoo Finance API!")
-
-# ✅ Streamlit's built-in auto-refresh (prevents flickering)
-st.set_query_params(refresh=str(time.time()))
