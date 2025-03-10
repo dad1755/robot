@@ -65,7 +65,7 @@ def analyze_chart_pattern(image_base64):
         response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional forex trader. Analyze the forex chart image and show BUY or SELL decision only. Ignore pattern on Weekend gap."},
+                {"role": "system", "content": "You are a professional forex trader. Analyze the forex chart image and JUST TELL ME BUY or SELL decision only. Ignore pattern on Weekend gap NO ANALYSIS"},
                 {
                     "role": "user",
                     "content": [
