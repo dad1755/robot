@@ -39,17 +39,23 @@ def save_chart_as_base64(data, interval):
     img_base64 = base64.b64encode(img_buf.read()).decode("utf-8")
     return img_base64
 
-# Analyze forex pattern with AI
+# Analyze forex pattern with AI and show token count
 def analyze_chart_pattern(image_base64):
     try:
+        messages = [
+            {"role": "system", "content": "You are a technical analyst. Identify the forex pattern from the chart and give a decision: BUY or SELL."},
+            {"role": "user", "content": f"Here is the EUR/USD forex chart in Base64 format:\n{image_base64}"}
+        ]
+
         completion = client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a technical analyst. Identify the forex pattern from the chart and give a decision: BUY or SELL."},
-                {"role": "user", "content": f"Here is the EUR/USD forex chart in Base64 format:\n{image_base64}"}
-            ]
+            messages=messages
         )
-        return completion.choices[0].message.content
+
+        # Get token usage
+        tokens_used = completion.usage.total_tokens
+
+        return f"📊 AI Analysis Result:\n\n{completion.choices[0].message.content}\n\n⚡ Tokens Used: {tokens_used}"
 
     except OpenAIError as e:
         return f"⚠️ AI Analysis Error: {str(e)}"
