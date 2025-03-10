@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 import datetime
+import time
 from openai import OpenAI, OpenAIError
 
 # ✅ Check if API key is loaded correctly
@@ -72,12 +73,14 @@ time_remaining = max(0, update_interval - time_since_update)
 
 st.write(f"🔄 Next update in: {int(time_remaining // 60)} min {int(time_remaining % 60)} sec")
 
-# Auto-refresh logic
+# Fetch and display forex data if time has elapsed
 if time_since_update >= update_interval:
     st.session_state.forex_data.clear()
     st.session_state.analysis.clear()
     st.session_state.last_update = datetime.datetime.now()
-    st.rerun()  # Safe way to trigger a rerun
+    
+    # ✅ Streamlit built-in auto-refresh (without flickering)
+    st.experimental_set_query_params(refresh=str(time.time()))
 
 # Fetch and display forex data
 intervals = {"15m": "15m", "5m": "5m"}
@@ -107,5 +110,5 @@ for label, interval in intervals.items():
     else:
         st.error(f"⚠️ Failed to fetch {label} forex data. Check Yahoo Finance API!")
 
-# Streamlit's built-in auto-refresh
-st.rerun()  # Auto-refresh every 15 minutes
+# ✅ Streamlit's built-in auto-refresh (prevents flickering)
+st.experimental_set_query_params(refresh=str(time.time()))
